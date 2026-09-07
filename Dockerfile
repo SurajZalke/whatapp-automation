@@ -1,11 +1,10 @@
 # ── SK Agent — Render-ready Dockerfile ────────────────────────────────────────
-# Sits at repo ROOT so Render finds it automatically on first deploy.
-# Build context is also the repo root — COPY paths are relative to repo root.
+# Uses Debian 12 Bookworm (bullseye repos are dead/404 as of 2024)
 
-FROM node:20-bullseye-slim
+FROM node:20-bookworm-slim
 
-# Install Chromium + all libs Puppeteer needs on Debian
-RUN apt-get update && apt-get install -y \
+# Install Chromium + Puppeteer dependencies
+RUN apt-get update && apt-get install -y --fix-missing \
     chromium \
     fonts-liberation \
     fonts-noto-color-emoji \
@@ -57,7 +56,7 @@ RUN npm ci --omit=dev
 # Copy backend source
 COPY backend/src ./src
 
-# Run as non-root (Puppeteer --no-sandbox is already set in client.js)
+# Run as non-root
 RUN groupadd -r skagent && useradd -r -g skagent skagent \
     && chown -R skagent:skagent /app
 USER skagent
