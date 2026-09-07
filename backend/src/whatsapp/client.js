@@ -124,13 +124,20 @@ async function init(socketIO) {
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
+        '--disable-dev-shm-usage',        // critical on low-RAM (Render 512MB)
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
+        '--single-process',               // saves ~100MB RAM on Render free tier
         '--disable-gpu',
         '--disable-extensions',
         '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--memory-pressure-off',
+        '--max_old_space_size=460',
       ],
     },
     webVersionCache: { type: 'local' },
@@ -201,6 +208,14 @@ async function init(socketIO) {
     clientState = 'disconnected';
     console.warn('[WhatsApp] Disconnected:', reason);
     if (io) io.emit('status', { state: 'disconnected', message: `Disconnected: ${reason}` });
+    // Auto-restart after 10s so Render keeps trying
+    console.log('[WhatsApp] Will attempt reconnect in 10s...');
+    setTimeout(() => {
+      console.log('[WhatsApp] Restarting client...');
+      client.initialize().catch(err => {
+        console.error('[WhatsApp] Reconnect failed:', err.message);
+      });
+    }, 10000);
   });
 
   // ── Message events ─────────────────────────────────────────────────────────
@@ -215,6 +230,9 @@ async function init(socketIO) {
   console.log('[WhatsApp] Initializing client...');
   client.initialize().catch(err => {
     console.error('[WhatsApp] Init error:', err.message);
+    console.error('[WhatsApp] Init stack:', err.stack);
+    clientState = 'disconnected';
+    if (io) io.emit('status', { state: 'error', message: err.message });
   });
 }
 

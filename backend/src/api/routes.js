@@ -50,8 +50,15 @@ router.get('/qr-page', async (req, res) => {
     <head><meta http-equiv="refresh" content="3"></head>
     <body style="background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:60px">
       <h2>⏳ Waiting for QR code...</h2>
-      <p>State: <b>${state.state}</b></p>
-      <p>This page auto-refreshes every 3 seconds.</p>
+      <p>State: <b style="color:#f90">${state.state}</b></p>
+      <p style="color:#aaa;font-size:13px">This page auto-refreshes every 3 seconds.</p>
+      <p style="color:#aaa;font-size:13px">If state stays "disconnected" for more than 60s,<br>
+      check Render Logs for Chrome/Puppeteer errors.</p>
+      <hr style="border-color:#333;margin:30px auto;width:300px">
+      <p style="font-size:12px;color:#555">
+        Debug: <a href="/health" style="color:#25D366">/health</a> &nbsp;|&nbsp; 
+        <a href="/api/status" style="color:#25D366">/api/status</a>
+      </p>
     </body></html>`);
   }
   // Convert raw QR string → base64 PNG
