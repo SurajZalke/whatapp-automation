@@ -1,0 +1,9 @@
+node_modules/
+.wwebjs_auth/
+.wwebjs_cache/
+data/
+.env
+uploads/*.pdf
+uploads/*.png
+uploads/*.jpg
+uploads/*.jpeg

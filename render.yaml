@@ -1,0 +1,52 @@
+# ── SK Agent — Render deployment config ───────────────────────────────────────
+# Deploy: https://dashboard.render.com → New → Web Service → connect your repo
+# Render will auto-detect this file and use these settings.
+
+services:
+  - type: web
+    name: sk-agent-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+
+    # Render free tier — 512MB RAM, shared CPU
+    plan: free
+
+    # Render sets PORT automatically; our server reads process.env.PORT
+    # Render also sets RENDER_EXTERNAL_URL automatically (used for self-ping)
+
+    # Health check — Render uses this to know the service is alive
+    healthCheckPath: /health
+
+    # Persistent disk — stores WhatsApp session so you don't re-scan QR every deploy
+    disk:
+      name: wwebjs-auth
+      mountPath: /app/.wwebjs_auth
+      sizeGB: 1
+
+    # Environment variables — set secret values in Render dashboard
+    # (Dashboard → your service → Environment → Add Environment Variable)
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: OWNER_NAME
+        value: Suraj Zalke
+      - key: OWNER_SHORT_NAME
+        value: Suraj
+      # ↓ Add these in Render Dashboard (keep secrets out of code)
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_API_KEY1
+        sync: false
+      - key: GROQ_API_KEY2
+        sync: false
+      - key: GROQ_API_KEY3
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY2
+        sync: false
+      - key: GEMINI_API_KEY3
+        sync: false

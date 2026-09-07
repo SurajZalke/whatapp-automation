@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# WhatsApp session data (re-scan QR on new machine)
+**/.wwebjs_auth/
+**/.wwebjs_cache/
+
+# Secrets — NEVER commit
+**/.env
+!**/.env.example
+
+# Uploads (user files)
+**/uploads/*.pdf
+**/uploads/*.png
+**/uploads/*.jpg
+**/uploads/*.jpeg
+**/uploads/*.mp4
+**/uploads/*.mp3
+
+# Logs
+*.log
+**/logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+build/
