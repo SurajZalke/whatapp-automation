@@ -154,8 +154,8 @@ async function init(socketIO) {
       timeout: 120000,  // give Chrome 120s to launch (Render cold start is slow)
     },
     // Increase timeouts so slow Render network doesn't cause scan failures
-    authTimeoutMs: 120000,   // wait 2 min for QR scan confirmation
-    qrMaxRetries: 10,        // regenerate QR up to 10 times before giving up
+    authTimeoutMs: 300000,   // wait up to 5 min for QR scan confirmation
+    qrMaxRetries: 30,        // keep generating replacement QR codes for longer
     webVersionCache: { type: 'local' },
   });
 

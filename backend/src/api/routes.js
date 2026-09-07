@@ -104,7 +104,7 @@ router.get('/qr-page', async (req, res) => {
     <p id="refresh-text" style="font-size:12px;color:#666">Checking for a new QR...</p>
     <div class="tip">
       ⚡ <b>Tip:</b> After scanning, wait up to 30 seconds for confirmation.<br>
-      If it fails, this page will show a new QR automatically.
+      If it fails, this page will show a new QR automatically. You have up to 5 minutes to connect.
     </div>
     <script>
       const pageQr = ${JSON.stringify(state.qr)};
