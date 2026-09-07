@@ -82,21 +82,51 @@ router.get('/qr-page', async (req, res) => {
   res.send(`<!DOCTYPE html><html>
   <head>
     <title>SK Agent — Scan QR</title>
-    <meta http-equiv="refresh" content="25">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-      body { background:#111; color:#fff; font-family:sans-serif; text-align:center; padding:40px; }
-      img  { border:8px solid white; border-radius:12px; width:300px; height:300px; }
-      h2   { color:#25D366; }
-      p    { color:#aaa; font-size:14px; }
+      body { background:#111; color:#fff; font-family:sans-serif; text-align:center; padding:30px; margin:0; }
+      .qr-wrap { display:inline-block; background:white; padding:16px; border-radius:16px; margin:20px auto; }
+      img  { display:block; width:320px; height:320px; }
+      h2   { color:#25D366; margin-bottom:6px; }
+      p    { color:#aaa; font-size:14px; margin:6px 0; }
+      .tip { background:#1a3a1a; border:1px solid #25D366; border-radius:8px; padding:12px; margin:16px auto; max-width:400px; font-size:13px; color:#cfc; }
+      .refresh-bar { width:100%; max-width:400px; height:4px; background:#333; border-radius:2px; margin:10px auto; overflow:hidden; }
+      .refresh-fill { height:4px; background:#25D366; width:100%; transition:width .2s linear; }
     </style>
   </head>
   <body>
     <h2>📱 Scan QR to Connect WhatsApp</h2>
-    <p>Open WhatsApp → Linked Devices → Link a Device → Scan below</p>
-    <br>
-    ${qrBase64 ? `<img src="${qrBase64}" alt="QR Code"/>` : '<p style="color:red">QR image generation failed — try refreshing</p>'}
-    <p style="margin-top:20px">⚠️ QR expires in ~60s — page auto-refreshes every 25s</p>
-    <p><a href="/api/qr-page" style="color:#25D366">Click here to manually refresh</a></p>
+    <p>Open WhatsApp → ⋮ Menu → Linked Devices → Link a Device</p>
+    <div class="qr-wrap">
+      ${qrBase64 ? `<img src="${qrBase64}" alt="QR Code"/>` : '<p style="color:red;padding:20px">QR generation failed — refreshing...</p>'}
+    </div>
+    <div class="refresh-bar"><div id="refresh-fill" class="refresh-fill"></div></div>
+    <p id="refresh-text" style="font-size:12px;color:#666">Checking for a new QR...</p>
+    <div class="tip">
+      ⚡ <b>Tip:</b> After scanning, wait up to 30 seconds for confirmation.<br>
+      If it fails, this page will show a new QR automatically.
+    </div>
+    <script>
+      const pageQr = ${JSON.stringify(state.qr)};
+      let seconds = 8;
+      async function refreshQr() {
+        try {
+          const response = await fetch('/api/status', { cache: 'no-store' });
+          const state = await response.json();
+          if (state.state === 'ready') {
+            document.body.innerHTML = '<h2 style="color:#25D366;margin-top:80px">WhatsApp connected</h2><p>SK Agent is online and listening for messages.</p>';
+            return;
+          }
+          if (state.state === 'qr' && state.qr && state.qr !== pageQr) window.location.reload();
+        } catch {}
+      }
+      setInterval(() => {
+        seconds = seconds <= 1 ? 8 : seconds - 1;
+        document.getElementById('refresh-fill').style.width = (seconds / 8 * 100) + '%';
+        document.getElementById('refresh-text').textContent = 'Checking for a new QR in ' + seconds + 's';
+      }, 1000);
+      setInterval(refreshQr, 2000);
+    </script>
   </body></html>`);
 });
 

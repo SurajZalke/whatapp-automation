@@ -48,6 +48,8 @@ let clientState = 'disconnected';
 let currentQR = null;
 let messageLog = [];
 let ownerChatId = null;
+let initializeInProgress = false;
+let reconnectTimer = null;
 
 // Dedup — both 'message' and 'message_create' can fire for same msg
 const processedIds = new Set();
@@ -142,13 +144,18 @@ async function init(socketIO) {
         '--mute-audio',
         '--ignore-certificate-errors',
         '--ignore-ssl-errors',
-        // Fix: disable crashpad handler that fails without writable DB path
         '--disable-crash-reporter',
         '--no-crash-upload',
         '--disable-logging',
+        // Required for restricted container environments (Render, Docker, k8s)
+        '--disable-seccomp-filter-sandbox',
+        '--disable-namespace-sandbox',
       ],
-      timeout: 60000,   // give Chrome 60s to launch (Render can be slow)
+      timeout: 120000,  // give Chrome 120s to launch (Render cold start is slow)
     },
+    // Increase timeouts so slow Render network doesn't cause scan failures
+    authTimeoutMs: 120000,   // wait 2 min for QR scan confirmation
+    qrMaxRetries: 10,        // regenerate QR up to 10 times before giving up
     webVersionCache: { type: 'local' },
   });
 
@@ -215,15 +222,17 @@ async function init(socketIO) {
 
   client.on('disconnected', (reason) => {
     clientState = 'disconnected';
+    currentQR = null;
     console.warn('[WhatsApp] Disconnected:', reason);
     if (io) io.emit('status', { state: 'disconnected', message: `Disconnected: ${reason}` });
-    // Auto-restart after 10s so Render keeps trying
+    // Keep one reconnect attempt pending so duplicate disconnect events do not
+    // start multiple Chromium instances.
+    if (reconnectTimer || initializeInProgress) return;
     console.log('[WhatsApp] Will attempt reconnect in 10s...');
-    setTimeout(() => {
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
       console.log('[WhatsApp] Restarting client...');
-      client.initialize().catch(err => {
-        console.error('[WhatsApp] Reconnect failed:', err.message);
-      });
+      tryInit();
     }, 10000);
   });
 
@@ -242,6 +251,8 @@ async function init(socketIO) {
   // Retry loop — Render cold starts can be slow; Chrome may fail first attempt
   let attempts = 0;
   async function tryInit() {
+    if (initializeInProgress || clientState === 'ready') return;
+    initializeInProgress = true;
     attempts++;
     console.log(`[WhatsApp] Init attempt ${attempts}...`);
     try {
@@ -254,10 +265,15 @@ async function init(socketIO) {
       if (attempts < 5) {
         const wait = attempts * 8000; // 8s, 16s, 24s, 32s
         console.log(`[WhatsApp] Retrying in ${wait / 1000}s...`);
-        setTimeout(tryInit, wait);
+        if (!reconnectTimer) reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          tryInit();
+        }, wait);
       } else {
         console.error('[WhatsApp] All init attempts failed. Check Chrome installation.');
       }
+    } finally {
+      initializeInProgress = false;
     }
   }
   tryInit();
