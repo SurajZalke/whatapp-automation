@@ -36,6 +36,52 @@ router.get('/status', (req, res) => {
   res.json({ success: true, ...state });
 });
 
+// ── QR page — open in browser to scan (useful on Render where no terminal UI) ──
+router.get('/qr-page', async (req, res) => {
+  const state = whatsapp.getState();
+  if (state.state === 'ready') {
+    return res.send(`<!DOCTYPE html><html><body style="background:#111;color:#0f0;font-family:sans-serif;text-align:center;padding:60px">
+      <h2>✅ WhatsApp is Connected!</h2>
+      <p>SK Agent is online and listening for messages.</p>
+    </body></html>`);
+  }
+  if (state.state !== 'qr' || !state.qr) {
+    return res.send(`<!DOCTYPE html><html>
+    <head><meta http-equiv="refresh" content="3"></head>
+    <body style="background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:60px">
+      <h2>⏳ Waiting for QR code...</h2>
+      <p>State: <b>${state.state}</b></p>
+      <p>This page auto-refreshes every 3 seconds.</p>
+    </body></html>`);
+  }
+  // Convert raw QR string → base64 PNG
+  let qrBase64 = '';
+  try {
+    const qrcode = require('qrcode');
+    qrBase64 = await qrcode.toDataURL(state.qr);
+  } catch { qrBase64 = ''; }
+
+  res.send(`<!DOCTYPE html><html>
+  <head>
+    <title>SK Agent — Scan QR</title>
+    <meta http-equiv="refresh" content="25">
+    <style>
+      body { background:#111; color:#fff; font-family:sans-serif; text-align:center; padding:40px; }
+      img  { border:8px solid white; border-radius:12px; width:300px; height:300px; }
+      h2   { color:#25D366; }
+      p    { color:#aaa; font-size:14px; }
+    </style>
+  </head>
+  <body>
+    <h2>📱 Scan QR to Connect WhatsApp</h2>
+    <p>Open WhatsApp → Linked Devices → Link a Device → Scan below</p>
+    <br>
+    ${qrBase64 ? `<img src="${qrBase64}" alt="QR Code"/>` : '<p style="color:red">QR image generation failed — try refreshing</p>'}
+    <p style="margin-top:20px">⚠️ QR expires in ~60s — page auto-refreshes every 25s</p>
+    <p><a href="/api/qr-page" style="color:#25D366">Click here to manually refresh</a></p>
+  </body></html>`);
+});
+
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 router.get('/settings', (req, res) => {

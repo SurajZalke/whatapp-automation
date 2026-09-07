@@ -16,7 +16,16 @@ const scheduler = require('./agent/taskScheduler');
 const routes = require('./api/routes');
 
 const PORT = process.env.PORT || 3001;
-const ORIGINS = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
+
+// Accept localhost (dev) + any Netlify domain + custom FRONTEND_URL env var
+const ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  /^https:\/\/.*\.netlify\.app$/,        // any Netlify preview/prod URL
+  /^https:\/\/.*\.onrender\.com$/,       // Render preview URLs
+  process.env.FRONTEND_URL,              // custom domain if set
+].filter(Boolean);
 
 const app = express();
 const server = http.createServer(app);

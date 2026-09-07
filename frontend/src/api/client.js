@@ -1,9 +1,19 @@
 import axios from 'axios'
 
+// Local dev  → Vite proxy handles /api → localhost:3001
+// Netlify    → VITE_API_URL=https://your-service.onrender.com
+const BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api'
+
+const SOCKET_URL = import.meta.env.VITE_API_URL || ''
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: BASE,
   timeout: 15000,
 })
+
+export { SOCKET_URL }
 
 // ── Status & QR ───────────────────────────────────────────────────────────────
 export const getStatus = () => api.get('/status').then(r => r.data)

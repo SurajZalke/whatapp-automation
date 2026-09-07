@@ -1,0 +1,18 @@
+# ── SK Agent Frontend — Netlify config ────────────────────────────────────────
+
+[build]
+  base    = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+# Environment variables set in Netlify dashboard:
+# VITE_API_URL = https://sk-agent-backend.onrender.com   ← your Render URL
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA routing — send all routes to index.html
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
