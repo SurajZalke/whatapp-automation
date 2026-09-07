@@ -29,7 +29,17 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 });
 
-// ── Status & QR ───────────────────────────────────────────────────────────────
+// ── Debug logs endpoint ───────────────────────────────────────────────────────
+const _startupLogs = [];
+const _origConsoleError = console.error.bind(console);
+const _origConsoleWarn  = console.warn.bind(console);
+console.error = (...a) => { _origConsoleError(...a); _startupLogs.push({ level:'error', msg: a.join(' '), t: Date.now() }); if (_startupLogs.length > 50) _startupLogs.shift(); };
+console.warn  = (...a) => { _origConsoleWarn(...a);  _startupLogs.push({ level:'warn',  msg: a.join(' '), t: Date.now() }); if (_startupLogs.length > 50) _startupLogs.shift(); };
+
+router.get('/debug-logs', (req, res) => {
+  const state = whatsapp.getState();
+  res.json({ state, logs: _startupLogs.slice(-20) });
+});
 
 router.get('/status', (req, res) => {
   const state = whatsapp.getState();
@@ -57,7 +67,8 @@ router.get('/qr-page', async (req, res) => {
       <hr style="border-color:#333;margin:30px auto;width:300px">
       <p style="font-size:12px;color:#555">
         Debug: <a href="/health" style="color:#25D366">/health</a> &nbsp;|&nbsp; 
-        <a href="/api/status" style="color:#25D366">/api/status</a>
+        <a href="/api/status" style="color:#25D366">/api/status</a> &nbsp;|&nbsp;
+        <a href="/api/debug-logs" style="color:#f90">/api/debug-logs ← check this for errors</a>
       </p>
     </body></html>`);
   }

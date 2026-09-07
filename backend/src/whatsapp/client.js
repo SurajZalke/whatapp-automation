@@ -124,21 +124,27 @@ async function init(socketIO) {
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',        // critical on low-RAM (Render 512MB)
+        '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
-        '--single-process',               // saves ~100MB RAM on Render free tier
+        // NOTE: --single-process removed — causes crashes on Chromium 120+
         '--disable-gpu',
         '--disable-extensions',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
-        '--disable-features=TranslateUI',
+        '--disable-features=TranslateUI,BlinkGenPropertyTrees',
         '--disable-ipc-flooding-protection',
-        '--memory-pressure-off',
-        '--max_old_space_size=460',
+        '--disable-software-rasterizer',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--hide-scrollbars',
+        '--mute-audio',
+        '--ignore-certificate-errors',
+        '--ignore-ssl-errors',
       ],
+      timeout: 60000,   // give Chrome 60s to launch (Render can be slow)
     },
     webVersionCache: { type: 'local' },
   });
@@ -228,12 +234,30 @@ async function init(socketIO) {
   });
 
   console.log('[WhatsApp] Initializing client...');
-  client.initialize().catch(err => {
-    console.error('[WhatsApp] Init error:', err.message);
-    console.error('[WhatsApp] Init stack:', err.stack);
-    clientState = 'disconnected';
-    if (io) io.emit('status', { state: 'error', message: err.message });
-  });
+  console.log(`[WhatsApp] Chrome path: ${CHROME_PATH}`);
+
+  // Retry loop — Render cold starts can be slow; Chrome may fail first attempt
+  let attempts = 0;
+  async function tryInit() {
+    attempts++;
+    console.log(`[WhatsApp] Init attempt ${attempts}...`);
+    try {
+      await client.initialize();
+    } catch (err) {
+      console.error(`[WhatsApp] Init attempt ${attempts} failed: ${err.message}`);
+      console.error('[WhatsApp] Stack:', err.stack?.split('\n').slice(0, 5).join('\n'));
+      clientState = 'disconnected';
+      if (io) io.emit('status', { state: 'error', message: err.message });
+      if (attempts < 5) {
+        const wait = attempts * 8000; // 8s, 16s, 24s, 32s
+        console.log(`[WhatsApp] Retrying in ${wait / 1000}s...`);
+        setTimeout(tryInit, wait);
+      } else {
+        console.error('[WhatsApp] All init attempts failed. Check Chrome installation.');
+      }
+    }
+  }
+  tryInit();
 }
 
 // ── Handle incoming message ────────────────────────────────────────────────────
