@@ -1,9 +1,7 @@
 # ── SK Agent — Render-ready Dockerfile ────────────────────────────────────────
-# Uses Debian 12 Bookworm (bullseye repos are dead/404 as of 2024)
-
 FROM node:20-bookworm-slim
 
-# Install Chromium + Puppeteer dependencies
+# Install Chromium + dependencies
 RUN apt-get update && apt-get install -y --fix-missing \
     chromium \
     fonts-liberation \
@@ -41,25 +39,27 @@ RUN apt-get update && apt-get install -y --fix-missing \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Tell Puppeteer to use system Chromium, not download its own
+# Use system Chromium, skip Puppeteer's own download
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
+# Create crash-reporter temp dir and give node user access
+# The built-in 'node' user (uid 1000) from node:bookworm-slim is the right user
+RUN mkdir -p /tmp/chromium-crashes \
+    && chown -R node:node /tmp/chromium-crashes
+
 WORKDIR /app
 
-# Copy backend package files first (layer cache)
 COPY backend/package*.json ./
-
-# Install production dependencies
 RUN npm ci --omit=dev
 
-# Copy backend source
 COPY backend/src ./src
 
-# Run as non-root
-RUN groupadd -r skagent && useradd -r -g skagent skagent \
-    && chown -R skagent:skagent /app
-USER skagent
+# Give node user ownership of the app
+RUN chown -R node:node /app
+
+# Switch to built-in node user (has proper home dir, no permission issues)
+USER node
 
 EXPOSE 3001
 CMD ["node", "src/index.js"]

@@ -128,7 +128,6 @@ async function init(socketIO) {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
-        // NOTE: --single-process removed — causes crashes on Chromium 120+
         '--disable-gpu',
         '--disable-extensions',
         '--disable-background-timer-throttling',
@@ -143,6 +142,10 @@ async function init(socketIO) {
         '--mute-audio',
         '--ignore-certificate-errors',
         '--ignore-ssl-errors',
+        // Fix: disable crashpad handler that fails without writable DB path
+        '--disable-crash-reporter',
+        '--no-crash-upload',
+        '--disable-logging',
       ],
       timeout: 60000,   // give Chrome 60s to launch (Render can be slow)
     },
